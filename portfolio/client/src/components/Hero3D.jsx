@@ -11,11 +11,11 @@ const BASE_Y = -1.45; // vertical offset of the placeholder avatar inside the ar
 const PALETTES = {
   light: {
     skin: '#C28E78', hair: '#2A211B', shirt: '#B4421A', eye: '#1F1B16',
-    shapes: ['#B4421A', '#E9C9A8', '#3E372F'], ambient: 0.9, key: 1.6, accentLight: '#FFB48A',
+    shapes: ['#B4421A', '#E9C9A8', '#3E372F'], ambient: 1.5, key: 2.3, accentLight: '#FFB48A',
   },
   dark: {
     skin: '#C28E78', hair: '#120E0B', shirt: '#F08A5D', eye: '#120E0B',
-    shapes: ['#F08A5D', '#6E5A48', '#F3ECE2'], ambient: 0.55, key: 1.2, accentLight: '#FF9A6B',
+    shapes: ['#F08A5D', '#6E5A48', '#F3ECE2'], ambient: 1.0, key: 1.7, accentLight: '#FF9A6B',
   },
 };
 
@@ -106,29 +106,54 @@ function ProceduralAvatar({ palette, pointer, motion }) {
 }
 
 /* ---------- Real avatar exported from Blender ---------- */
+// The GLB has two clips: "Idle" (loops) and "Wave" (plays once when the avatar is clicked).
 function GLBAvatar({ pointer, motion }) {
   const group = useRef();
   const { scene, animations } = useGLTF(AVATAR_URL);
-  const { actions, names } = useAnimations(animations, group);
+  const { actions, mixer } = useAnimations(animations, group);
+  const waving = useRef(false);
 
   useEffect(() => {
-    if (names.length && motion) {
-      const idle = actions[names.find((n) => /idle|wave|loop/i.test(n)) || names[0]];
-      idle?.reset().fadeIn(0.4).play();
-      return () => idle?.fadeOut(0.2);
-    }
-    return undefined;
-  }, [actions, names, motion]);
+    if (!motion) return undefined;
+    const idle = actions.Idle || actions[Object.keys(actions)[0]];
+    idle?.reset().fadeIn(0.4).play();
+    const onDone = (e) => {
+      if (e.action === actions.Wave) {
+        waving.current = false;
+        idle?.reset().fadeIn(0.3).play();
+      }
+    };
+    mixer.addEventListener('finished', onDone);
+    return () => {
+      mixer.removeEventListener('finished', onDone);
+      idle?.fadeOut(0.2);
+    };
+  }, [actions, mixer, motion]);
+
+  const wave = () => {
+    const w = actions.Wave;
+    if (!w || w.isRunning()) return;
+    waving.current = true;
+    actions.Idle?.fadeOut(0.25);
+    w.reset().setLoop(THREE.LoopOnce, 1);
+    w.clampWhenFinished = false;
+    w.fadeIn(0.25).play();
+  };
 
   useFrame((_, dt) => {
     if (!motion) return;
     const { x, y } = pointer.current;
-    group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, x * 0.6, 5, dt);
-    group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, -y * 0.12, 5, dt);
+    group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, x * 0.45, 5, dt);
+    group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, -y * 0.08, 5, dt);
+    // Slide to the right while waving so the raised arm stays inside the arch.
+    group.current.position.x = THREE.MathUtils.damp(group.current.position.x, waving.current ? 0.2 : 0, 4, dt);
   });
 
   return (
-    <group ref={group} position={[0, -1.4, 0]}>
+    <group ref={group} position={[0, -1.95, 0]} scale={0.86}
+      onClick={wave}
+      onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
+      onPointerOut={() => { document.body.style.cursor = ''; }}>
       <primitive object={scene} />
     </group>
   );
@@ -187,10 +212,10 @@ function Scene({ theme, hasGlb, motion }) {
   const pointer = usePointerRef(motion);
   const shapes = useMemo(
     () => [
-      { key: 'cube', geometry: <boxGeometry args={[0.55, 0.55, 0.55]} />, color: palette.shapes[0], base: [-1.15, 1.1, 0.2], depth: 0.5, spin: 0.5 },
-      { key: 'ring', geometry: <torusGeometry args={[0.38, 0.12, 8, 18]} />, color: palette.shapes[1], base: [1.15, 1.4, 0.1], depth: 0.4, spin: 0.7 },
-      { key: 'octa', geometry: <octahedronGeometry args={[0.42, 0]} />, color: palette.shapes[2], base: [1.25, -0.5, 0.3], depth: 0.6, spin: 0.4 },
-      { key: 'ico', geometry: <icosahedronGeometry args={[0.32, 0]} />, color: palette.shapes[0], base: [-1.2, -0.6, 0.3], depth: 0.35, spin: 0.9 },
+      { key: 'cube', geometry: <boxGeometry args={[0.55, 0.55, 0.55]} />, color: palette.shapes[0], base: [-1.15, 1.25, -1.0], depth: 0.5, spin: 0.5 },
+      { key: 'ring', geometry: <torusGeometry args={[0.38, 0.12, 8, 18]} />, color: palette.shapes[1], base: [1.1, 1.5, -0.8], depth: 0.4, spin: 0.7 },
+      { key: 'octa', geometry: <octahedronGeometry args={[0.42, 0]} />, color: palette.shapes[2], base: [1.25, 0.15, -1.3], depth: 0.6, spin: 0.4 },
+      { key: 'ico', geometry: <icosahedronGeometry args={[0.32, 0]} />, color: palette.shapes[0], base: [-1.25, 0.1, -1.3], depth: 0.35, spin: 0.9 },
     ],
     [palette]
   );

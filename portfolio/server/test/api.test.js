@@ -111,6 +111,11 @@ test('malformed JSON and oversized bodies are rejected', async () => {
   assert.equal(big.status, 413);
 });
 
+test('requests from the site\'s own origin are allowed (single-service deployment)', async () => {
+  const r = await fetch(`${base}/api/health`, { headers: { Origin: base } });
+  assert.equal(r.status, 200);
+});
+
 test('requests from other origins are refused', async () => {
   const r = await fetch(`${base}/api/health`, { headers: { Origin: 'https://evil.example' } });
   assert.equal(r.status, 403);

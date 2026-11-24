@@ -36,6 +36,8 @@ export function getConfig() {
       user: process.env.SMTP_USER || '',
       pass: process.env.SMTP_PASS || '',
       to: process.env.CONTACT_TO || '',
+      from: process.env.MAIL_FROM || process.env.SMTP_USER || '',
+      brevoApiKey: process.env.BREVO_API_KEY || '',
       dryRun: String(process.env.MAIL_DRY_RUN).toLowerCase() === 'true',
     },
   };

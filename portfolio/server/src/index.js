@@ -21,7 +21,7 @@ export function createApp() {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'"],
+          scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
           styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
           fontSrc: ["'self'", 'https://fonts.gstatic.com'],
           imgSrc: ["'self'", 'data:', 'blob:'],
@@ -33,15 +33,21 @@ export function createApp() {
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     })
   );
-  app.use(
+  // Allow: no Origin header (curl, server-to-server), the site's own origin (when this server also
+  // hosts the built frontend), and the origins listed in CLIENT_ORIGIN.
+  app.use((req, res, next) =>
     cors({
       origin(origin, cb) {
-        // Allow same-origin / curl (no Origin header) and the configured frontend origins.
         if (!origin || cfg.clientOrigins.includes(origin)) return cb(null, true);
+        try {
+          if (new URL(origin).host === req.headers.host) return cb(null, true);
+        } catch {
+          /* malformed Origin: fall through to rejection */
+        }
         cb(new Error('Origin not allowed'));
       },
       methods: ['GET', 'POST'],
-    })
+    })(req, res, next)
   );
   app.use(express.json({ limit: '10kb' }));
 

@@ -46,7 +46,8 @@ Secrets live only in `server/.env`, which is git-ignored. They are never sent to
 
 ```
 client/
-  public/models/avatar.glb   <- put your Blender export here (optional)
+  public/models/avatar.glb   <- Blender avatar export (used automatically)
+  blender/                   build_avatar.py, ali_avatar.blend, avatar.glb, preview renders
   public/media/promo.mp4     <- put your After Effects export here
   src/App.jsx                page sections, theme toggle
   src/components/Hero3D.jsx  3D scene (avatar + mouse-reactive shapes)
@@ -66,13 +67,13 @@ server/
 
 `Hero3D.jsx` renders a Three.js scene. A single pointer position is shared by every object:
 
-- the avatar's head and body turn toward the cursor, it blinks, and it waves when clicked
+- the avatar's head and body turn toward the cursor, it idles gently, and it waves when clicked
 - four floating shapes move with the cursor at different depths (parallax), spin faster on hover, and burst-spin on click
 - a point light follows the cursor
 - the scene colours change with the theme
 - with `prefers-reduced-motion` the scene renders once and stays still; if WebGL is unavailable a static illustration is shown
 
-**Adding your Blender avatar:** export `avatar.glb` into `client/public/models/` (see `README.txt` there). The site detects it automatically and uses it in place of the placeholder. Keep your `.blend` file for submission.
+**Blender avatar:** `blender/ali_avatar.blend` is the source file; `avatar.glb` (copied to `client/public/models/`) is the web export. The model is low-poly, about 3.25 units tall, with its origin at the bottom of the torso, an armature, and two animation clips, `Idle` (looping) and `Wave` (plays on click). To regenerate it, run `build_avatar.py` in Blender's Scripting tab, or headless with `python build_avatar.py` using the `bpy` module. If the GLB is missing, the site falls back to a procedural placeholder.
 
 ## How the chatbot (RAG pipeline) works
 

@@ -50,8 +50,34 @@ function getTransport() {
 export function resetTransport() { transport = null; }
 
 /** Replaceable in tests. */
+function parseAddress(a) {
+  const m = /^"?(.*?)"?\s*<(.+)>$/.exec(a);
+  return m ? { name: m[1], email: m[2] } : { email: a };
+}
+
+/** Send through Brevo's HTTPS API (no SMTP ports needed). */
+async function sendViaBrevoApi(message, apiKey) {
+  const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'api-key': apiKey, 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({
+      sender: parseAddress(message.from),
+      to: [{ email: message.to }],
+      replyTo: parseAddress(message.replyTo),
+      subject: message.subject,
+      textContent: message.text,
+      htmlContent: message.html,
+    }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(`Brevo API ${r.status}: ${data.message || 'request failed'}`);
+  return { messageId: data.messageId, accepted: [message.to] };
+}
+
 export const mailer = {
   async send(message) {
+    const { mail } = getConfig();
+    if (mail.brevoApiKey) return sendViaBrevoApi(message, mail.brevoApiKey);
     return getTransport().sendMail(message);
   },
 };
@@ -92,14 +118,15 @@ router.post('/', async (req, res) => {
     console.log('[contact] DRY RUN, not sending:\n' + text);
     return res.json({ ok: true, dryRun: true });
   }
-  if (!mail.user || !mail.pass || !mail.to) {
-    console.error('[contact] SMTP_USER, SMTP_PASS or CONTACT_TO is not set');
+  const hasCreds = mail.brevoApiKey ? !!mail.from : !!(mail.user && mail.pass);
+  if (!hasCreds || !mail.to) {
+    console.error('[contact] mail credentials, MAIL_FROM or CONTACT_TO is not set');
     return res.status(503).json({ error: 'The contact form is not available right now. Please try again later.' });
   }
 
   try {
     const info = await mailer.send({
-      from: `"Portfolio contact form" <${mail.user}>`,
+      from: `"Portfolio contact form" <${mail.from}>`,
       to: mail.to,
       replyTo: `"${values.name.replace(/"/g, '')}" <${values.email}>`,
       subject: `[Portfolio] ${values.subject}`,
