@@ -46,8 +46,9 @@ Secrets live only in `server/.env`, which is git-ignored. They are never sent to
 
 ```
 client/
-  public/models/avatar.glb   <- Blender avatar export (used automatically)
-  blender/                   build_avatar.py, ali_avatar.blend, avatar.glb, preview renders
+  public/models/avatar.glb   <- the avatar (rigged businessman with animation clips)
+  blender/businessman/       build_businessman.py + helpers that add the Greet/Bow/Ponder clips
+  blender/                   older low-poly avatar sources (no longer used)
   public/media/promo.mp4     <- put your After Effects export here
   src/App.jsx                page sections, theme toggle
   src/components/Hero3D.jsx  3D scene (avatar + mouse-reactive shapes)
@@ -67,13 +68,13 @@ server/
 
 `Hero3D.jsx` renders a Three.js scene. A single pointer position is shared by every object:
 
-- the avatar's head and body turn toward the cursor, it idles gently, and it waves when clicked
+- the avatar's head and body turn toward the cursor, it idles gently, and each click plays the next reaction (greet, nod, bow, look around, ponder)
 - four floating shapes move with the cursor at different depths (parallax), spin faster on hover, and burst-spin on click
 - a point light follows the cursor
 - the scene colours change with the theme
 - with `prefers-reduced-motion` the scene renders once and stays still; if WebGL is unavailable a static illustration is shown
 
-**Blender avatar:** `blender/ali_avatar.blend` is the source file; `avatar.glb` (copied to `client/public/models/`) is the web export. The model is low-poly, about 3.25 units tall, with its origin at the bottom of the torso, an armature, and two animation clips, `Idle` (looping) and `Wave` (plays on click). To regenerate it, run `build_avatar.py` in Blender's Scripting tab, or headless with `python build_avatar.py` using the `bpy` module. If the GLB is missing, the site falls back to a procedural placeholder.
+**Avatar:** `client/public/models/avatar.glb` is a rigged, textured businessman model with `Idle` (loops), `Walk`, `Nod` and `LookAround` clips from the source file, plus `Greet`, `Bow` and `Ponder` added by `blender/businessman/build_businessman.py` (run it with `blender -b --python build_businessman.py -- out.glb`). The model's hands are clasped and skinned together, so the new clips move both arms symmetrically and the script re-skins the hands first. If the GLB is missing, the site falls back to a procedural placeholder.
 
 ## How the chatbot (RAG pipeline) works
 

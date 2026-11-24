@@ -87,7 +87,7 @@ export default function App() {
               <a className="btn btn--solid" href="#projects">See my work</a>
               <button className="btn btn--ghost" onClick={() => setChatOpen(true)}>Chat with my AI</button>
             </div>
-            <p className="hint">Move your mouse over the scene, and click or tap the avatar to make it wave.</p>
+            <p className="hint">Move your mouse and he looks at you. Click or tap the avatar to see him greet, bow, nod or look around.</p>
           </div>
           <div className="hero__scene">
             <div className="hero__arch">

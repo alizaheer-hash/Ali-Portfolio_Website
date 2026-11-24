@@ -6,6 +6,8 @@ import { prefersReducedMotion } from '../theme.js';
 
 const AVATAR_URL = '/models/avatar.glb';
 const BASE_Y = -1.45; // vertical offset of the placeholder avatar inside the arch
+const AVATAR_SCALE = 2.45; // the businessman model is 1.78 units tall
+const AVATAR_Y = -2.38;
 
 /* Colours per theme so the scene matches the page. */
 const PALETTES = {
@@ -106,21 +108,32 @@ function ProceduralAvatar({ palette, pointer, motion }) {
 }
 
 /* ---------- Real avatar exported from Blender ---------- */
-// The GLB has two clips: "Idle" (loops) and "Wave" (plays once when the avatar is clicked).
+// The GLB ships with "Idle" (loops) and a set of one-shot clips. Each click plays the next one,
+// then the avatar settles back into Idle. The head also turns to follow the cursor.
+const REACTIONS = ['Greet', 'Nod', 'Bow', 'LookAround', 'Ponder'];
+
 function GLBAvatar({ pointer, motion }) {
   const group = useRef();
   const { scene, animations } = useGLTF(AVATAR_URL);
   const { actions, mixer } = useAnimations(animations, group);
-  const waving = useRef(false);
+  const current = useRef(null);   // reaction clip that is playing, if any
+  const next = useRef(0);         // index of the next reaction in REACTIONS
+  const head = useRef({ neck: null, head: null, yaw: 0, pitch: 0 });
+  const tmp = useMemo(() => ({ q: new THREE.Quaternion(), e: new THREE.Euler() }), []);
+
+  useEffect(() => {
+    head.current.neck = scene.getObjectByName('Neck');
+    head.current.head = scene.getObjectByName('Head');
+  }, [scene]);
 
   useEffect(() => {
     if (!motion) return undefined;
     const idle = actions.Idle || actions[Object.keys(actions)[0]];
     idle?.reset().fadeIn(0.4).play();
     const onDone = (e) => {
-      if (e.action === actions.Wave) {
-        waving.current = false;
-        idle?.reset().fadeIn(0.3).play();
+      if (e.action === current.current) {
+        current.current = null;
+        idle?.reset().fadeIn(0.35).play();
       }
     };
     mixer.addEventListener('finished', onDone);
@@ -130,28 +143,41 @@ function GLBAvatar({ pointer, motion }) {
     };
   }, [actions, mixer, motion]);
 
-  const wave = () => {
-    const w = actions.Wave;
-    if (!w || w.isRunning()) return;
-    waving.current = true;
-    actions.Idle?.fadeOut(0.25);
-    w.reset().setLoop(THREE.LoopOnce, 1);
-    w.clampWhenFinished = false;
-    w.fadeIn(0.25).play();
+  const react = () => {
+    if (!motion || current.current) return;
+    let clip = null;
+    for (let i = 0; i < REACTIONS.length && !clip; i += 1) {
+      const idx = (next.current + i) % REACTIONS.length;
+      if (actions[REACTIONS[idx]]) { clip = actions[REACTIONS[idx]]; next.current = idx + 1; }
+    }
+    if (!clip) return;
+    current.current = clip;
+    actions.Idle?.fadeOut(0.3);
+    clip.reset().setLoop(THREE.LoopOnce, 1);
+    clip.clampWhenFinished = false;
+    clip.fadeIn(0.3).play();
   };
 
   useFrame((_, dt) => {
     if (!motion) return;
     const { x, y } = pointer.current;
-    group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, x * 0.45, 5, dt);
-    group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, -y * 0.08, 5, dt);
-    // Slide to the right while waving so the raised arm stays inside the arch.
-    group.current.position.x = THREE.MathUtils.damp(group.current.position.x, waving.current ? 0.2 : 0, 4, dt);
+    // Gentle whole-body turn towards the cursor...
+    group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, x * 0.28, 4, dt);
+    // ...and the head follows a bit further. Applied after the mixer, on top of the clip pose.
+    const h = head.current;
+    h.yaw = THREE.MathUtils.damp(h.yaw, x * 0.45, 6, dt);
+    h.pitch = THREE.MathUtils.damp(h.pitch, -y * 0.25, 6, dt);
+    const k = current.current ? 0.35 : 1; // follow the cursor less while a clip is playing
+    [h.neck, h.head].forEach((bone, i) => {
+      if (!bone) return;
+      tmp.e.set(h.pitch * k * (i ? 0.6 : 0.4), h.yaw * k * (i ? 0.6 : 0.4), 0);
+      bone.quaternion.multiply(tmp.q.setFromEuler(tmp.e));
+    });
   });
 
   return (
-    <group ref={group} position={[0, -1.95, 0]} scale={0.86}
-      onClick={wave}
+    <group ref={group} position={[0, AVATAR_Y, 0]} scale={AVATAR_SCALE}
+      onClick={react}
       onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
       onPointerOut={() => { document.body.style.cursor = ''; }}>
       <primitive object={scene} />
@@ -298,7 +324,7 @@ export default function Hero3D({ theme }) {
         dpr={[1, 2]}
         camera={{ position: [0, 0.4, 6], fov: 38 }}
         gl={{ alpha: true, antialias: true }}
-        aria-label="Interactive 3D avatar. Move the mouse to make it look at you; click it to wave."
+        aria-label="Interactive 3D avatar. Move the mouse and it looks at you; click it and it greets, bows, nods or looks around."
       >
         <Scene theme={theme} hasGlb={hasGlb} motion={motion} />
       </Canvas>
