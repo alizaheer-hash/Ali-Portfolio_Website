@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { getConfig } from './config.js';
 import chatRoute from './routes/chat.js';
 import contactRoute from './routes/contact.js';
@@ -79,7 +80,7 @@ export function createApp() {
 export default createApp();
 
 // Start the server unless this file is imported by tests.
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) {
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
   const cfg = getConfig();
   const app = createApp();
   getIndex()

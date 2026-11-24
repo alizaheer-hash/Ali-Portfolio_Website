@@ -19,7 +19,7 @@ export function getConfig() {
     clientDist: path.resolve(root, '..', 'client', 'dist'),
     gemini: {
       key: geminiKey,
-      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
       embedModel: process.env.GEMINI_EMBED_MODEL || 'gemini-embedding-001',
     },
     openaiCompat: {
