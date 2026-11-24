@@ -1,6 +1,7 @@
 // All portfolio content lives here, taken from Ali's CV.
 // Fill in `repo`, `demo` and `image` for each project when you have them;
-// empty values are simply hidden.
+// empty values are simply hidden. `icon` picks the thumbnail icon (eye, cube, lock, cross);
+// `video` is an optional demo recording opened from the "Watch demo" button.
 
 export const profile = {
   name: 'Ali Mohammad Zaheer',
@@ -17,6 +18,9 @@ export const profile = {
 export const projects = [
   {
     id: 'museum-heist',
+    icon: 'eye',
+    video: '/media/projects/museum-heist.mp4',
+    poster: '/media/projects/museum-heist.jpg',
     title: 'Museum Heist: AI Guard Lab',
     description:
       'A 3D stealth demo with a guard AI state machine (patrol, chase, search), waypoint patrols, a detection radius, last-known-position search and a loot mechanic.',
@@ -29,6 +33,9 @@ export const projects = [
   },
   {
     id: 'webcraft',
+    icon: 'cube',
+    video: '/media/projects/webcraft.mp4',
+    poster: '/media/projects/webcraft.jpg',
     title: 'WebCraft',
     description:
       'A voxel sandbox with procedural terrain, chunked meshing and collision. Break and place blocks, use the hotbar, sprint and fly.',
@@ -41,6 +48,9 @@ export const projects = [
   },
   {
     id: 'neon-vault',
+    icon: 'lock',
+    video: '/media/projects/neon-vault.mp4',
+    poster: '/media/projects/neon-vault.jpg',
     title: 'Neon Vault',
     description:
       'A 3D browser escape-room game with ordered objectives, a timer, score and a live HUD. Modular design: game state, event bus, game loop and UI components.',
@@ -53,6 +63,9 @@ export const projects = [
   },
   {
     id: 'hospital-system',
+    icon: 'cross',
+    video: '',
+    poster: '',
     title: 'Hospital Management System',
     description:
       'A team project: a responsive web-based hospital management system with CRUD functionality for doctor records and backend integration.',

@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { projects } from '../data.js';
+import ProjectIcon from './ProjectIcon.jsx';
+import VideoModal from './VideoModal.jsx';
 
 const allTags = ['All', ...Array.from(new Set(projects.flatMap((p) => [...p.tags])))];
 
@@ -7,9 +9,24 @@ function initials(title) {
   return title.split(/[\s:]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
+function Thumb({ p, onPlay }) {
+  const inner = p.image
+    ? <img src={p.image} alt={`${p.title} screenshot`} loading="lazy" />
+    : p.icon ? <ProjectIcon name={p.icon} size={56} /> : <span>{initials(p.title)}</span>;
+  if (!p.video) return <div className="project__thumb" aria-hidden={!p.image}>{inner}</div>;
+  return (
+    <button type="button" className="project__thumb project__thumb--video" onClick={() => onPlay(p)} aria-label={`Watch the ${p.title} demo video`}>
+      {inner}
+      <span className="project__play" aria-hidden="true">▶</span>
+    </button>
+  );
+}
+
 export default function Projects() {
   const [tag, setTag] = useState('All');
   const [query, setQuery] = useState('');
+  const [playing, setPlaying] = useState(null);
+  const closeVideo = useCallback(() => setPlaying(null), []);
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -41,9 +58,7 @@ export default function Projects() {
         {shown.map((p, i) => (
           <article key={p.id} className="project reveal" style={{ '--d': `${i * 70}ms` }}>
             <div className="project__no">{String(projects.indexOf(p) + 1).padStart(2, '0')}</div>
-            <div className="project__thumb" aria-hidden={!p.image}>
-              {p.image ? <img src={p.image} alt={`${p.title} screenshot`} loading="lazy" /> : <span>{initials(p.title)}</span>}
-            </div>
+            <Thumb p={p} onPlay={setPlaying} />
             <div className="project__body">
               <h3>{p.title}</h3>
               <p>{p.description}</p>
@@ -52,6 +67,7 @@ export default function Projects() {
               </ul>
               {p.note && <p className="project__note">{p.note}</p>}
               <div className="project__links">
+                {p.video && <button type="button" className="btn btn--accent" onClick={() => setPlaying(p)}>▶ Watch demo</button>}
                 {p.demo && <a className="btn btn--ghost" href={p.demo} target="_blank" rel="noreferrer">Live demo</a>}
                 {p.repo && <a className="btn btn--ghost" href={p.repo} target="_blank" rel="noreferrer">Source code</a>}
               </div>
@@ -60,6 +76,7 @@ export default function Projects() {
         ))}
         {shown.length === 0 && <p className="empty">No projects match “{query}”. Try another word.</p>}
       </div>
+      {playing && <VideoModal project={playing} onClose={closeVideo} />}
     </section>
   );
 }
