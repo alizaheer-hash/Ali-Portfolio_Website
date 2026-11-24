@@ -75,6 +75,9 @@ export function createApp() {
   return app;
 }
 
+// Vercel (and other serverless hosts) import this file and use the default export as the handler.
+export default createApp();
+
 // Start the server unless this file is imported by tests.
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) {
   const cfg = getConfig();
